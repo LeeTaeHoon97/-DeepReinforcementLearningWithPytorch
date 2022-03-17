@@ -11,8 +11,12 @@ def softmax_cross_entropy_with_logits(y_true, y_pred):
 	negatives = torch.full(pi.shape, -100.0)
 	p = torch.where(where, negatives, p)
 
-	loss = torch.nn.softmax_cross_entropy_with_logits(labels = pi, logits = p)
-
-	return loss
+	loss = torch.nn.CrossEntropyLoss()
+	"""
+	loss = torch.nn.CrossEntropyLoss(labels = pi, logits = p)
+	logits = last_layer,
+	labels = target_output
+	"""
+	return loss(p,pi)
 
 
