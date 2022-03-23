@@ -57,8 +57,9 @@ class Residual_CNN(nn.Module):
 
         for i in range(5):
             x = self.conv_and_residual_layer(x)
-            x = input_block.add(x)
+            x = torch.add(input_block,x)
             x = F.leaky_relu(x)
+
 
         vh = self.value_head1(x)
         vh = vh.view(vh.size(0), -1)
