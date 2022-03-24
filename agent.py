@@ -1,5 +1,9 @@
 # %matplotlib inline
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 import numpy as np
 import random
 
@@ -42,7 +46,9 @@ class Agent():
 		self.cpuct = cpuct
 
 		self.MCTSsimulations = mcts_simulations
-		self.model = model
+
+		device = torch.device("cuda")
+		self.model = model.to(device)
 
 		self.mcts = None
 
@@ -185,6 +191,11 @@ class Agent():
 	def replay(self, ltmemory):
 		lg.logger_mcts.info('******RETRAINING MODEL******')
 
+		# self.model = self.model.train()
+		# learning_rate = config.LEARNING_RATE
+		# optimizer = torch.optim.SGD(model.parameters(), lr = learning_rate,weight_decay=1e-5)
+		#
+		# loss=softmax_cross_entropy_with_logits
 
 		for i in range(config.TRAINING_LOOPS):
 			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))

@@ -1,7 +1,7 @@
 import torch
 
 def softmax_cross_entropy_with_logits(y_true, y_pred):
-
+	device=torch.device("cuda")
 	p = y_pred
 	pi = y_true
 
@@ -11,7 +11,7 @@ def softmax_cross_entropy_with_logits(y_true, y_pred):
 	negatives = torch.full(pi.shape, -100.0)
 	p = torch.where(where, negatives, p)
 
-	loss = torch.nn.CrossEntropyLoss()
+	loss = torch.nn.CrossEntropyLoss().to(device)
 	"""
 	loss = torch.nn.CrossEntropyLoss(labels = pi, logits = p)
 	logits = last_layer,

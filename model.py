@@ -11,7 +11,7 @@ class Residual_CNN(nn.Module):
         # filter(out_channel), kernel_size는 config의 hidden layer 그대로 복사
         # filter = 75 , kernel = (4,4)
         # padding = same -> 1         -> this was solved since Pytorch 1.10.0 “same” keyword is accepted as input for padding for conv2d
-        # x = add([input_block, x])   ( https://tensorflow.google.cn/api_docs/python/tf/keras/layers/add  )    -> torch.sum https://pytorch.org/docs/stable/generated/torch.sum.html
+        # x = add([input_block, x])   ( https://tensorflow.google.cn/api_docs/python/tf/keras/layers/add  )    -> torch.add https://pytorch.org/docs/stable/generated/torch.add.html
         # l2 regularizer는 loss파트에서 weight decay를 조정  https://discuss.pytorch.org/t/how-to-implement-pytorch-equivalent-of-keras-kernel-weight-regulariser/99773
         self.hidden_layer = nn.Sequential(
             nn.Conv2d(self.input_dim, 75, kernel_size=4, padding="same"),
@@ -36,7 +36,7 @@ class Residual_CNN(nn.Module):
         nn.LeakyReLU()
         )
         self.value_head2 = nn.Sequential(
-            nn.Linear("vh.size(0)", 20)
+            nn.Linear("vh.size(0)", 20),
         nn.LeakyReLU(),
         nn.Linear(20, 1),
         nn.Tanh()
@@ -69,4 +69,4 @@ class Residual_CNN(nn.Module):
         ph = ph.view(ph.size(0), -1)
         ph = self.policy_head2(ph)
 
-        return x
+        return {'value_head':vg,'policy_head':ph}
