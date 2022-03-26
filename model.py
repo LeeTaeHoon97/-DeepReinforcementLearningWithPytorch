@@ -69,4 +69,5 @@ class Residual_CNN(nn.Module):
         ph = ph.view(ph.size(0), -1)
         ph = self.policy_head2(ph)
 
-        return {'value_head':vg,'policy_head':ph}
+        return {'value_head':vh,'policy_head':ph}
+
