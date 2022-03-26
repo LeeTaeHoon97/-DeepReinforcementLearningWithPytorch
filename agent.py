@@ -111,9 +111,12 @@ class Agent():
 
 	def get_preds(self, state):
 		#predict the leaf
-		inputToModel = np.array([self.model.convertToModelInput(state)])
+		inputToModel = torch.Tensor([self.model.convertToModelInput(state)])
 
-		preds = self.model.predict(inputToModel)
+		#Tenosr로 나온 결과를 다시 numpy로 변경
+		model_eval=self.model.eval().numpy()
+		preds = model_eval(inputToModel)
+
 		value_array = preds[0]
 		logits_array = preds[1]
 		value = value_array[0]
@@ -191,18 +194,39 @@ class Agent():
 	def replay(self, ltmemory):
 		lg.logger_mcts.info('******RETRAINING MODEL******')
 
-		# self.model = self.model.train()
-		# learning_rate = config.LEARNING_RATE
-		# optimizer = torch.optim.SGD(model.parameters(), lr = learning_rate,weight_decay=1e-5)
-		#
-		# loss=softmax_cross_entropy_with_logits
+		#Build model
+		self.model = self.model.train()
+		learning_rate = config.LEARNING_RATE
+		optimizer = torch.optim.SGD(model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
+
+		vh_criterion=nn.MSELoss().to(device)
+		ph_criderion=softmax_cross_entropy_with_logits()
 
 		for i in range(config.TRAINING_LOOPS):
+			#minibatch는 매 반복마다 크기가 바뀔수 있다.
 			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))
 
-			training_states = np.array([self.model.convertToModelInput(row['state']) for row in minibatch])
-			training_targets = {'value_head': np.array([row['value'] for row in minibatch])
-								, 'policy_head': np.array([row['AV'] for row in minibatch])} 
+			#np를 torch.Tensor로 변경
+			training_states = torch.Tensor([self.model.convertToModelInput(row['state']) for row in minibatch])
+			training_targets = {'value_head': torch.Tensor([row['value'] for row in minibatch])
+								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch])}
+
+			#minibatch가 8이라고 가정하면, len(training_states)=8이어야 함.
+			for idx in range(len(training_states)):
+				data=training_states[idx]
+				target=training_targets[idx]
+
+				optimizer.zero_grad()
+				hypothesis=self.model(data)
+				vh_hypo=hypothesis['value_head']
+				ph_hypo=hypothesis['policy_head']
+
+				vh_cost=vh_criterion(vh_hypo,target['value_head'])
+				ph_cost=ph_criderion(ph_hypo,target['policy_head'])
+
+				#cost가 2개이상일경우 어떻게 처리?
+				(vh_cost+ph_cost).backward()
+
 
 			fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
 			lg.logger_mcts.info('NEW LOSS %s', fit.history)

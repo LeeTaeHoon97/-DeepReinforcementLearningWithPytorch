@@ -13,6 +13,12 @@ class Residual_CNN(nn.Module):
         # padding = same -> 1         -> this was solved since Pytorch 1.10.0 “same” keyword is accepted as input for padding for conv2d
         # x = add([input_block, x])   ( https://tensorflow.google.cn/api_docs/python/tf/keras/layers/add  )    -> torch.add https://pytorch.org/docs/stable/generated/torch.add.html
         # l2 regularizer는 loss파트에서 weight decay를 조정  https://discuss.pytorch.org/t/how-to-implement-pytorch-equivalent-of-keras-kernel-weight-regulariser/99773
+
+        self.reg_const=reg_const
+        self.input_dim=input_dim
+        self.output_dim=output_dim
+        self.hidden_layer=hidden_layers
+
         self.hidden_layer = nn.Sequential(
             nn.Conv2d(self.input_dim, 75, kernel_size=4, padding="same"),
             nn.BatchNorm2d(75),
@@ -48,7 +54,7 @@ class Residual_CNN(nn.Module):
             nn.LeakyReLU()
         )
         self.policy_head2 = nn.Sequential(
-            nn.Linear("ph.size(0)", output_dim)
+            nn.Linear("ph.size(0)", self.output_dim)
         )
 
     def forward(self, x):
@@ -71,3 +77,7 @@ class Residual_CNN(nn.Module):
 
         return {'value_head':vh,'policy_head':ph}
 
+    def convertToModelInput(self, state):
+        inputToModel = state.binary  # np.append(state.binary, [(state.playerTurn + 1)/2] * self.input_dim[1] * self.input_dim[2])
+        inputToModel = np.reshape(inputToModel, self.input_dim)
+        return (inputToModel)
