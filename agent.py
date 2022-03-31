@@ -211,11 +211,12 @@ class Agent():
 			training_targets = {'value_head': torch.Tensor([row['value'] for row in minibatch])
 								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch])}
 
-			#minibatch가 8이라고 가정하면, len(training_states)=8이어야 함.
-			for idx in range(len(training_states)):
-				data=training_states[idx]
-				target=training_targets[idx]
+			#minibatch단위로 데이터셋이 구성될때 마다 다시 데이터 로더로 batch_size만큼 불러와 학습
+			dataset=TensorDataset(training_states,training_targets)
+			ds_loader=DataLoader(dataset,batch_size=32,shuufle=True)
 
+			fit_history = {'loss': 0.0, 'value_head_loss': 0.0, 'policy_head_loss': 0.0}
+			for data,target in ds_loader:
 				optimizer.zero_grad()
 				hypothesis=self.model(data)
 				vh_hypo=hypothesis['value_head']
@@ -224,16 +225,19 @@ class Agent():
 				vh_cost=vh_criterion(vh_hypo,target['value_head'])
 				ph_cost=ph_criderion(ph_hypo,target['policy_head'])
 
-				#cost가 2개이상일경우 어떻게 처리?
+				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
+				optimizer.step()
 
+				fit_history['loss']+=(vh_cost+ph_cost).item()
+				fit_history['value_head_loss']+=vh_cost.item()
+				fit_history['policy_head_loss']+=ph_cost.item()
+			# fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
+			lg.logger_mcts.info('NEW LOSS %s', fit_history)
 
-			fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
-			lg.logger_mcts.info('NEW LOSS %s', fit.history)
-
-			self.train_overall_loss.append(round(fit.history['loss'][config.EPOCHS - 1],4))
-			self.train_value_loss.append(round(fit.history['value_head_loss'][config.EPOCHS - 1],4)) 
-			self.train_policy_loss.append(round(fit.history['policy_head_loss'][config.EPOCHS - 1],4)) 
+			self.train_overall_loss.append(round(fit_history['loss'][config.EPOCHS - 1],4))
+			self.train_value_loss.append(round(fit_history['value_head_loss'][config.EPOCHS - 1],4))
+			self.train_policy_loss.append(round(fit_history['policy_head_loss'][config.EPOCHS - 1],4))
 
 		plt.plot(self.train_overall_loss, 'k')
 		plt.plot(self.train_value_loss, 'k:')
@@ -247,10 +251,12 @@ class Agent():
 		time.sleep(1.0)
 
 		print('\n')
-		self.model.printWeightAverages()
+
+		# self.model.printWeightAverages()
 
 	def predict(self, inputToModel):
-		preds = self.model.predict(inputToModel)
+		self.model.eval()
+		preds = self.model(inputToModel)
 		return preds
 
 	def buildMCTS(self, state):
