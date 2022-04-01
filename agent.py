@@ -47,7 +47,7 @@ class Agent():
 
 		self.MCTSsimulations = mcts_simulations
 
-		device = torch.device("cuda")
+		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		self.model = model.to(device)
 
 		self.mcts = None
@@ -113,8 +113,8 @@ class Agent():
 		#predict the leaf
 		inputToModel = torch.Tensor([self.model.convertToModelInput(state)])
 
-		#Tenosr로 나온 결과를 다시 numpy로 변경
-		model_eval=self.model.eval().numpy()
+		
+		model_eval=self.model.eval()
 		preds = model_eval(inputToModel)
 
 		value_array = preds[0]

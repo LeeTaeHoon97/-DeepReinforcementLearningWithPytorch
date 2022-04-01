@@ -1,7 +1,7 @@
 import torch
 
 def softmax_cross_entropy_with_logits(y_true, y_pred):
-	device=torch.device("cuda")
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	p = y_pred
 	pi = y_true
 
