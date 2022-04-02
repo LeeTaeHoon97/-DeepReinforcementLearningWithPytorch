@@ -47,8 +47,8 @@ class Agent():
 
 		self.MCTSsimulations = mcts_simulations
 
-		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-		self.model = model.to(device)
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		self.model = model.to(self.device)
 
 		self.mcts = None
 
@@ -200,9 +200,9 @@ class Agent():
 		#Build model
 		self.model = self.model.train()
 		learning_rate = config.LEARNING_RATE
-		optimizer = torch.optim.SGD(model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
+		optimizer = torch.optim.SGD(self.model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
 
-		vh_criterion=nn.MSELoss().to(device)
+		vh_criterion=nn.MSELoss().to(self.device)
 		ph_criderion=softmax_cross_entropy_with_logits()
 
 		for i in range(config.TRAINING_LOOPS):
