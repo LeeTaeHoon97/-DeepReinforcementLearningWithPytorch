@@ -23,9 +23,9 @@ class Residual_CNN(nn.Module):
         self.hidden_layer=hidden_layers
         # print("input_dim : ",self.input_dim)
         # print("output_dim : ",self.output_dim)
-        # input_dim은 (2,6,7)이므로, 첫 입력에 말단의 채널이 들어간다고 생각.
+        # input_dim은 (2,6,7)이므로, 첫 입력에 첫 채널이 들어간다고 생각.
         self.hidden_layer = nn.Sequential(
-            nn.Conv2d(self.input_dim[-1], 75, kernel_size=4, padding="same"),
+            nn.Conv2d(self.input_dim[0], 75, kernel_size=4, padding="same"),
             nn.BatchNorm2d(75),
             nn.LeakyReLU()
         )
@@ -47,7 +47,7 @@ class Residual_CNN(nn.Module):
         nn.LeakyReLU()
         )
         self.value_head2 = nn.Sequential(
-            nn.Linear(311, 20),                     #<<
+            nn.Linear(42, 20),                     #<<
         nn.LeakyReLU(),
         nn.Linear(20, 1),
         nn.Tanh()
@@ -59,12 +59,12 @@ class Residual_CNN(nn.Module):
             nn.LeakyReLU()
         )
         self.policy_head2 = nn.Sequential(
-            nn.Linear(311, self.output_dim)         #<<
+            nn.Linear(42, self.output_dim)         #<<
         )
 
     def forward(self, x):
-        input_block = x
         x = self.hidden_layer(x)
+        input_block = x
 
         for i in range(5):
             x = self.conv_and_residual_layer(x)
@@ -75,14 +75,14 @@ class Residual_CNN(nn.Module):
         vh = self.value_head1(x)
         vh = vh.view(vh.size(0), -1)
 
-        print("vh : ",vh,vh.size(0))
+        # print("vh : ",vh.shape)
 
         vh = self.value_head2(vh)
 
         ph = self.policy_head1(x)
         ph = ph.view(ph.size(0), -1)
 
-        print("ph : ",ph,ph.size(0))
+        # print("ph : ",ph.shape)
 
         ph = self.policy_head2(ph)
 
