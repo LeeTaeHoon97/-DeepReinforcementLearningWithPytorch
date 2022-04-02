@@ -111,7 +111,7 @@ class Agent():
 
 	def get_preds(self, state):
 		#predict the leaf
-		inputToModel = torch.Tensor([self.model.convertToModelInput(state)])
+		inputToModel = torch.Tensor([self.model.convertToModelInput(state)]).to(self.device)
 
 		
 		model_eval=self.model.eval()
@@ -123,6 +123,10 @@ class Agent():
 
 		logits = logits_array[0]
 		
+		if torch.cuda.is_available():
+			value=value.cpu()
+			logits=logits.cpu()
+
 		value=value.detach().numpy()
 		logits=logits.detach().numpy()
 		
@@ -210,9 +214,9 @@ class Agent():
 			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))
 
 			#np를 torch.Tensor로 변경
-			training_states = torch.Tensor([self.model.convertToModelInput(row['state']) for row in minibatch])
+			training_states = torch.Tensor([self.model.convertToModelInput(row['state']) for row in minibatch]).to(self.device)
 			training_targets = {'value_head': torch.Tensor([row['value'] for row in minibatch])
-								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch])}
+								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch])}.to(self.device)
 
 			#minibatch단위로 데이터셋이 구성될때 마다 다시 데이터 로더로 batch_size만큼 불러와 학습
 			dataset=TensorDataset(training_states,training_targets)
