@@ -116,13 +116,16 @@ class Agent():
 		
 		model_eval=self.model.eval()
 		preds = model_eval(inputToModel)
-
-		value_array = preds[0]
-		logits_array = preds[1]
+		# print("preds.shape :",preds.keys() )
+		value_array = preds["value_head"]
+		logits_array = preds["policy_head"]
 		value = value_array[0]
 
 		logits = logits_array[0]
-
+		
+		value=value.detach().numpy()
+		logits=logits.detach().numpy()
+		
 		allowedActions = state.allowedActions
 
 		mask = np.ones(logits.shape,dtype=bool)
