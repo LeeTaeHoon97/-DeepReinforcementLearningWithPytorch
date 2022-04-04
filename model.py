@@ -36,21 +36,21 @@ class Residual_CNN(nn.Module):
             nn.BatchNorm2d(75),
             nn.LeakyReLU(),
 
-        # residual_layer
-        nn.Conv2d(75, 75, kernel_size=4, padding="same"),
-        nn.BatchNorm2d(75)
+            # residual_layer
+            nn.Conv2d(75, 75, kernel_size=4, padding="same"),
+            nn.BatchNorm2d(75)
         )
 
         self.value_head1 = nn.Sequential(
             nn.Conv2d(75, 1, kernel_size=1, padding="same"),
             nn.BatchNorm2d(1),
-        nn.LeakyReLU()
+            nn.LeakyReLU()
         )
         self.value_head2 = nn.Sequential(
             nn.Linear(42, 20),                     #<<
-        nn.LeakyReLU(),
-        nn.Linear(20, 1),
-        nn.Tanh()
+            nn.LeakyReLU(),
+            nn.Linear(20, 1),
+            nn.Tanh()
         )
 
         self.policy_head1 = nn.Sequential(
