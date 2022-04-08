@@ -1,8 +1,10 @@
 # %matplotlib inline
 
+from sklearn.utils import shuffle
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader,TensorDataset,Dataset
 
 import numpy as np
 import random
@@ -18,6 +20,20 @@ import time
 import matplotlib.pyplot as plt
 from IPython import display
 import pylab as pl
+
+class MyDataset(Dataset):
+    def __init__(self,state,vh,ph):
+        self.state = state
+        self.value_head = vh
+        self.policy_head = ph
+    def __getitem__(self, index):
+        x = self.state[index]
+        y = self.value_head[index]
+        z = self.policy_head[index]
+        return {'data': x, 'value_head': y,"policy_head": z}
+    
+    def __len__(self):
+        return len(self.state)
 
 
 class User():
@@ -207,7 +223,7 @@ class Agent():
 		optimizer = torch.optim.SGD(self.model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
 
 		vh_criterion=nn.MSELoss().to(self.device)
-		ph_criderion=softmax_cross_entropy_with_logits()
+		ph_criderion=softmax_cross_entropy_with_logits
 
 		for i in range(config.TRAINING_LOOPS):
 			#minibatch는 매 반복마다 크기가 바뀔수 있다.
@@ -215,22 +231,24 @@ class Agent():
 
 			#np를 torch.Tensor로 변경
 			training_states = torch.Tensor([self.model.convertToModelInput(row['state']) for row in minibatch]).to(self.device)
-			training_targets = {'value_head': torch.Tensor([row['value'] for row in minibatch])
-								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch])}.to(self.device)
+			training_targets = {'value_head': torch.Tensor([row['value'] for row in minibatch]).to(self.device)
+								, 'policy_head': torch.Tensor([row['AV'] for row in minibatch]).to(self.device)}
 
 			#minibatch단위로 데이터셋이 구성될때 마다 다시 데이터 로더로 batch_size만큼 불러와 학습
-			dataset=TensorDataset(training_states,training_targets)
-			ds_loader=DataLoader(dataset,batch_size=32,shuufle=True)
+
+			#training_states 은 tensor이고 training_targets는 dict이라 커스텀 데이터셋 사용
+			dataset=MyDataset(training_states,training_targets['value_head'],training_targets['policy_head'])
+			ds_loader=DataLoader(dataset,batch_size=32,shuffle=True)
 
 			fit_history = {'loss': 0.0, 'value_head_loss': 0.0, 'policy_head_loss': 0.0}
-			for data,target in ds_loader:
+			for batch in ds_loader:
 				optimizer.zero_grad()
-				hypothesis=self.model(data)
+				hypothesis=self.model(batch['data'])
 				vh_hypo=hypothesis['value_head']
 				ph_hypo=hypothesis['policy_head']
 
-				vh_cost=vh_criterion(vh_hypo,target['value_head'])
-				ph_cost=ph_criderion(ph_hypo,target['policy_head'])
+				vh_cost=vh_criterion(vh_hypo,batch['value_head'])
+				ph_cost=ph_criderion(ph_hypo,batch['policy_head'])
 
 				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
