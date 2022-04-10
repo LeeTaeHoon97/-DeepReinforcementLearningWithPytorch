@@ -94,7 +94,7 @@ class Residual_CNN(nn.Module):
         return (inputToModel)
 
     def write(self,game,version):
-        torch.save(self.model.state_dict(), (run_folder + 'models/version' + "{0:0>4}".format(version) + '.pt'))
+        torch.save(self.state_dict(), (run_folder + 'models/version' + "{0:0>4}".format(version) + '.pt'))
     
     def read(self,game,run_number,version):
         return torch.load(run_archive_folder + game + '/run' + str(run_number).zfill(4) + "/models/version" + "{0:0>4}".format(version) + 'pt')
