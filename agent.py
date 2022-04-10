@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 from IPython import display
 import pylab as pl
 
+from tqdm import tqdm
+
 class MyDataset(Dataset):
     def __init__(self,state,vh,ph):
         self.state = state
@@ -132,7 +134,6 @@ class Agent():
 		
 		model_eval=self.model.eval()
 		preds = model_eval(inputToModel)
-		# print("preds.shape :",preds.keys() )
 		value_array = preds["value_head"]
 		logits_array = preds["policy_head"]
 		value = value_array[0]
@@ -209,7 +210,6 @@ class Agent():
 		else:
 			action_idx = np.random.multinomial(1, pi)
 			action = np.where(action_idx==1)[0][0]
-
 		value = values[action]
 
 		return action, value
@@ -225,7 +225,7 @@ class Agent():
 		vh_criterion=nn.MSELoss().to(self.device)
 		ph_criderion=softmax_cross_entropy_with_logits
 
-		for i in range(config.TRAINING_LOOPS):
+		for i in tqdm(range(config.TRAINING_LOOPS)):		#####config.TRAINING_LOOPS
 			#minibatch는 매 반복마다 크기가 바뀔수 있다.
 			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))
 
@@ -240,7 +240,7 @@ class Agent():
 			dataset=MyDataset(training_states,training_targets['value_head'],training_targets['policy_head'])
 			ds_loader=DataLoader(dataset,batch_size=32,shuffle=True)
 
-			fit_history = {'loss': 0.0, 'value_head_loss': 0.0, 'policy_head_loss': 0.0}
+			fit_history = {'loss':[0.0], 'value_head_loss': [0.0], 'policy_head_loss': [0.0]}
 			for batch in ds_loader:
 				optimizer.zero_grad()
 				hypothesis=self.model(batch['data'])
@@ -253,16 +253,20 @@ class Agent():
 				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
 				optimizer.step()
+				# print("vh+ph : ",(vh_cost+ph_cost).item())
+				# print("vh : ",(vh_cost).item())
+				# print("ph : ",(ph_cost).item())
+				fit_history['loss'][0]+=(vh_cost+ph_cost).item()
+				fit_history['value_head_loss'][0]+=vh_cost.item()
+				fit_history['policy_head_loss'][0]+=ph_cost.item()
 
-				fit_history['loss']+=(vh_cost+ph_cost).item()
-				fit_history['value_head_loss']+=vh_cost.item()
-				fit_history['policy_head_loss']+=ph_cost.item()
+				self.train_overall_loss.append(round(fit_history['loss'][config.EPOCHS - 1],4))
+				self.train_value_loss.append(round(fit_history['value_head_loss'][config.EPOCHS - 1],4))
+				self.train_policy_loss.append(round(fit_history['policy_head_loss'][config.EPOCHS - 1],4))
+			
 			# fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
 			lg.logger_mcts.info('NEW LOSS %s', fit_history)
 
-			self.train_overall_loss.append(round(fit_history['loss'][config.EPOCHS - 1],4))
-			self.train_value_loss.append(round(fit_history['value_head_loss'][config.EPOCHS - 1],4))
-			self.train_policy_loss.append(round(fit_history['policy_head_loss'][config.EPOCHS - 1],4))
 
 		plt.plot(self.train_overall_loss, 'k')
 		plt.plot(self.train_value_loss, 'k:')
@@ -276,7 +280,7 @@ class Agent():
 		time.sleep(1.0)
 
 		print('\n')
-
+		
 		# self.model.printWeightAverages()
 
 	def predict(self, inputToModel):

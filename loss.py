@@ -6,7 +6,7 @@ def softmax_cross_entropy_with_logits(y_true, y_pred):
 	pi = y_true
 
 	zero = torch.zeros(pi.shape, dtype=torch.float32).to(device)
-	where = torch.equal(pi, zero).to(device)
+	where = torch.eq(pi, zero).to(device)
 
 	negatives = torch.full(pi.shape, -100.0).to(device)
 	p = torch.where(where, negatives, p).to(device)

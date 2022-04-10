@@ -48,7 +48,6 @@ class MCTS():
 		return len(self.tree)
 
 	def moveToLeaf(self):
-
 		lg.logger_mcts.info('------MOVING TO LEAF------')
 
 		breadcrumbs = []
@@ -56,12 +55,12 @@ class MCTS():
 
 		done = 0
 		value = 0
-
+		
 		while not currentNode.isLeaf():
-
+			
 			lg.logger_mcts.info('PLAYER TURN...%d', currentNode.state.playerTurn)
 		
-			maxQU = -99999
+			maxQU = float('-inf')
 
 			if currentNode == self.root:
 				epsilon = config.EPSILON
@@ -85,12 +84,15 @@ class MCTS():
 				lg.logger_mcts.info('action: %d (%d)... N = %d, P = %f, nu = %f, adjP = %f, W = %f, Q = %f, U = %f, Q+U = %f'
 					, action, action % 7, edge.stats['N'], np.round(edge.stats['P'],6), np.round(nu[idx],6), ((1-epsilon) * edge.stats['P'] + epsilon * nu[idx] )
 					, np.round(edge.stats['W'],6), np.round(Q,6), np.round(U,6), np.round(Q+U,6))
+				
+				# print("Q :" ,Q)
+				# print("U :" ,U)
+				# print("maxQU :" ,maxQU)
 
 				if Q + U > maxQU:
 					maxQU = Q + U
 					simulationAction = action
 					simulationEdge = edge
-
 			lg.logger_mcts.info('action with highest Q + U...%d', simulationAction)
 
 			newState, value, done = currentNode.state.takeAction(simulationAction) #the value of the newState from the POV of the new playerTurn
