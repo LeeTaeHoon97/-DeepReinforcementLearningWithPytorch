@@ -1,5 +1,6 @@
 # %matplotlib inline
 
+from operator import truediv
 from sklearn.utils import shuffle
 import torch
 import torch.nn as nn
@@ -76,7 +77,8 @@ class Agent():
 		self.val_overall_loss = []
 		self.val_value_loss = []
 		self.val_policy_loss = []
-
+		self.fit_history = {'loss':[0.0], 'value_head_loss': [0.0], 'policy_head_loss': [0.0]}
+			
 	
 	def simulate(self):
 
@@ -240,12 +242,20 @@ class Agent():
 			dataset=MyDataset(training_states,training_targets['value_head'],training_targets['policy_head'])
 			ds_loader=DataLoader(dataset,batch_size=32,shuffle=True)
 
-			fit_history = {'loss':[0.0], 'value_head_loss': [0.0], 'policy_head_loss': [0.0]}
 			for batch in ds_loader:
 				optimizer.zero_grad()
 				hypothesis=self.model(batch['data'])
 				vh_hypo=hypothesis['value_head']
 				ph_hypo=hypothesis['policy_head']
+				
+				vh_hypo=vh_hypo.detach().numpy()
+				ph_hypo=ph_hypo.detach().numpy()
+				# 때때로 cost들이 nan값이 발생하기에 numpy로 바꾼뒤 nan값을 0으로 바꿔주고 다시 텐서화
+				# RuntimeError: element 0 of variables does not require grad and does not have a grad_fn 가 발생
+				# 텐서화 할때 requires_grad를 true로 함.
+				
+				vh_hypo=torch.tensor(np.where(np.isnan(vh_hypo),0,vh_hypo),requires_grad=True)
+				ph_hypo=torch.tensor(np.where(np.isnan(ph_hypo),0,ph_hypo),requires_grad=True)
 
 				vh_cost=vh_criterion(vh_hypo,batch['value_head'])
 				ph_cost=ph_criderion(ph_hypo,batch['policy_head'])
@@ -253,19 +263,16 @@ class Agent():
 				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
 				optimizer.step()
-				# print("vh+ph : ",(vh_cost+ph_cost).item())
-				# print("vh : ",(vh_cost).item())
-				# print("ph : ",(ph_cost).item())
-				fit_history['loss'][0]+=(vh_cost+ph_cost).item()
-				fit_history['value_head_loss'][0]+=vh_cost.item()
-				fit_history['policy_head_loss'][0]+=ph_cost.item()
+				self.fit_history['loss'][0]=(vh_cost+ph_cost).item()
+				self.fit_history['value_head_loss'][0]=vh_cost.item()
+				self.fit_history['policy_head_loss'][0]=ph_cost.item()
 
-				self.train_overall_loss.append(round(fit_history['loss'][config.EPOCHS - 1],4))
-				self.train_value_loss.append(round(fit_history['value_head_loss'][config.EPOCHS - 1],4))
-				self.train_policy_loss.append(round(fit_history['policy_head_loss'][config.EPOCHS - 1],4))
+				self.train_overall_loss.append(round(self.fit_history['loss'][0],4))
+				self.train_value_loss.append(round(self.fit_history['value_head_loss'][0],4))
+				self.train_policy_loss.append(round(self.fit_history['policy_head_loss'][0],4))
 			
 			# fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
-			lg.logger_mcts.info('NEW LOSS %s', fit_history)
+			lg.logger_mcts.info('NEW LOSS %s', self.fit_history)
 
 
 		plt.plot(self.train_overall_loss, 'k')
