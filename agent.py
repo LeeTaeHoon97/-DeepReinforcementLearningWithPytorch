@@ -12,7 +12,6 @@ import random
 
 import MCTS as mc
 from game import GameState
-from loss import softmax_cross_entropy_with_logits
 
 import config
 import loggers as lg
@@ -224,8 +223,8 @@ class Agent():
 		learning_rate = config.LEARNING_RATE
 		optimizer = torch.optim.SGD(self.model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
 
-		vh_criterion=nn.MSELoss().to(self.device)
-		ph_criderion=softmax_cross_entropy_with_logits
+		vh_criterion=nn.MSELoss()
+		ph_criderion=torch.nn.CrossEntropyLoss()
 
 		for i in tqdm(range(config.TRAINING_LOOPS)):		#####config.TRAINING_LOOPS
 			#minibatch는 매 반복마다 크기가 바뀔수 있다.
@@ -241,21 +240,13 @@ class Agent():
 			#training_states 은 tensor이고 training_targets는 dict이라 커스텀 데이터셋 사용
 			dataset=MyDataset(training_states,training_targets['value_head'],training_targets['policy_head'])
 			ds_loader=DataLoader(dataset,batch_size=32,shuffle=True)
-
+			torch.autograd.set_detect_anomaly(True)
 			for batch in ds_loader:
+				
 				optimizer.zero_grad()
 				hypothesis=self.model(batch['data'])
 				vh_hypo=hypothesis['value_head']
 				ph_hypo=hypothesis['policy_head']
-				
-				vh_hypo=vh_hypo.detach().numpy()
-				ph_hypo=ph_hypo.detach().numpy()
-				# 때때로 cost들이 nan값이 발생하기에 numpy로 바꾼뒤 nan값을 0으로 바꿔주고 다시 텐서화
-				# RuntimeError: element 0 of variables does not require grad and does not have a grad_fn 가 발생
-				# 텐서화 할때 requires_grad를 true로 함.
-				
-				vh_hypo=torch.tensor(np.where(np.isnan(vh_hypo),0,vh_hypo),requires_grad=True)
-				ph_hypo=torch.tensor(np.where(np.isnan(ph_hypo),0,ph_hypo),requires_grad=True)
 
 				vh_cost=vh_criterion(vh_hypo,batch['value_head'])
 				ph_cost=ph_criderion(ph_hypo,batch['policy_head'])
@@ -263,7 +254,7 @@ class Agent():
 				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
 				optimizer.step()
-				self.fit_history['loss'][0]=(vh_cost+ph_cost).item()
+				self.fit_history['loss'][0]=(vh_cost+ph_cost).item()/2		#vh_loss와 ph_loss의 중간값
 				self.fit_history['value_head_loss'][0]=vh_cost.item()
 				self.fit_history['policy_head_loss'][0]=ph_cost.item()
 
@@ -271,7 +262,6 @@ class Agent():
 				self.train_value_loss.append(round(self.fit_history['value_head_loss'][0],4))
 				self.train_policy_loss.append(round(self.fit_history['policy_head_loss'][0],4))
 			
-			# fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
 			lg.logger_mcts.info('NEW LOSS %s', self.fit_history)
 
 
@@ -288,8 +278,7 @@ class Agent():
 
 		print('\n')
 		
-		# self.model.printWeightAverages()
-
+		
 	def predict(self, inputToModel):
 		self.model.eval()
 		preds = self.model(inputToModel)
