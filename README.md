@@ -3,6 +3,12 @@
 Convert keras to pytorch for Personal Study
 
 Inspired :https://medium.com/applied-data-science/how-to-build-your-own-alphazero-ai-using-python-and-keras-7f664945c188
+## game
+#### connect 4
+![Connect_Four](https://user-images.githubusercontent.com/59239082/163004555-438f6f0e-2079-4b39-8c35-307b79459665.gif)
+
+
+
 ## model layers
 ![keras_model](https://user-images.githubusercontent.com/59239082/162997653-c3a17ddc-1c2a-4c9f-9ca1-118de9ef40ad.png)
 
