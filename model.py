@@ -87,7 +87,7 @@ class Residual_CNN(nn.Module):
         inputToModel = np.reshape(inputToModel, self.input_dim)
         return (inputToModel)
 
-    def write(self,game,version):
+    def write(self,version):
         torch.save(self.state_dict(), (run_folder + 'models/version' + "{0:0>4}".format(version) + '.pt'))
     
     def read(self,game,run_number,version):
