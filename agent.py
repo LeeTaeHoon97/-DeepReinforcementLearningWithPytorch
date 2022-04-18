@@ -21,8 +21,6 @@ import matplotlib.pyplot as plt
 from IPython import display
 import pylab as pl
 
-from tqdm import tqdm
-
 class MyDataset(Dataset):
     def __init__(self,state,vh,ph):
         self.state = state
@@ -226,7 +224,7 @@ class Agent():
 		vh_criterion=nn.MSELoss()
 		ph_criderion=torch.nn.CrossEntropyLoss()
 
-		for i in tqdm(range(config.TRAINING_LOOPS)):		
+		for i in (range(config.TRAINING_LOOPS):		
 			#minibatch는 매 반복마다 크기가 바뀔수 있다.
 			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))
 
