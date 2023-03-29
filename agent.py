@@ -222,7 +222,7 @@ class Agent():
 		optimizer = torch.optim.SGD(self.model.parameters(), lr = learning_rate,weight_decay=1e-5)	#weight_decay = l2 regularize
 
 		vh_criterion=nn.MSELoss()
-		ph_criderion=torch.nn.CrossEntropyLoss()
+		ph_criterion=torch.nn.CrossEntropyLoss()
 
 		for i in (range(config.TRAINING_LOOPS):		
 			#minibatch는 매 반복마다 크기가 바뀔수 있다.
@@ -247,7 +247,7 @@ class Agent():
 				ph_hypo=hypothesis['policy_head']
 
 				vh_cost=vh_criterion(vh_hypo,batch['value_head'])
-				ph_cost=ph_criderion(ph_hypo,batch['policy_head'])
+				ph_cost=ph_criterion(ph_hypo,batch['policy_head'])
 
 				#cost가 2개이상일경우 어떻게 처리? -> cost의 합을 backward시킴.
 				(vh_cost+ph_cost).backward()
